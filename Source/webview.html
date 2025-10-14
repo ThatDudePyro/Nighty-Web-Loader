@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Nighty Web</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid transparent; /* This helps with resize detection */
+    }
+
+    webview {
+      width: 100%;
+      height: calc(100% - 35px);
+      display: inline-flex;
+    }
+
+    #titlebar {
+      height: 35px;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      -webkit-app-region: drag;
+      border-bottom: 3px solid #333;
+    }
+
+    .window-button {
+      -webkit-app-region: no-drag;
+      background: transparent;
+      border: none;
+      color: #999;
+      width: 35px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .window-button:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .window-button.close:hover {
+      background: #e81123;
+      color: #fff;
+    }
+
+    .window-button.reset:hover {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    #status {
+      color: #fff;
+      font-size: 12px;
+      font-family: 'Segoe UI', sans-serif;
+      flex: 1;
+      text-align: center;
+      user-select: none;
+    }
+
+    /* Resize handles */
+    .resize-handle {
+      position: fixed;
+      z-index: 9999;
+    }
+    .resize-handle-top {
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      cursor: ns-resize;
+    }
+    .resize-handle-bottom {
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      cursor: ns-resize;
+    }
+    .resize-handle-left {
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      cursor: ew-resize;
+    }
+    .resize-handle-right {
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      cursor: ew-resize;
+    }
+    .resize-handle-topleft {
+      top: 0;
+      left: 0;
+      width: 10px;
+      height: 10px;
+      cursor: nwse-resize;
+    }
+    .resize-handle-topright {
+      top: 0;
+      right: 0;
+      width: 10px;
+      height: 10px;
+      cursor: nesw-resize;
+    }
+    .resize-handle-bottomleft {
+      bottom: 0;
+      left: 0;
+      width: 10px;
+      height: 10px;
+      cursor: nesw-resize;
+    }
+    .resize-handle-bottomright {
+      bottom: 0;
+      right: 0;
+      width: 10px;
+      height: 10px;
+      cursor: nwse-resize;
+    }
+  </style>
+</head>
+<body>
+  <!-- Resize handles -->
+  <div class="resize-handle resize-handle-top"></div>
+  <div class="resize-handle resize-handle-bottom"></div>
+  <div class="resize-handle resize-handle-left"></div>
+  <div class="resize-handle resize-handle-right"></div>
+  <div class="resize-handle resize-handle-topleft"></div>
+  <div class="resize-handle resize-handle-topright"></div>
+  <div class="resize-handle resize-handle-bottomleft"></div>
+  <div class="resize-handle resize-handle-bottomright"></div>
+
+  <div id="titlebar" ondblclick="maximizeWindow()">
+    <button class="window-button reload" onclick="reload()" title="Reload">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M13.65 2.35C12.2 0.9 10.21 0 8 0 3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z"/>
+      </svg>
+    </button>
+    <button class="window-button reset" onclick="resetConfig()" title="Reset Config">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm4 10.87L10.87 12 8 9.13 5.13 12 4 10.87 6.87 8 4 5.13 5.13 4 8 6.87 10.87 4 12 5.13 9.13 8 12 10.87z"/>
+      </svg>
+    </button>
+    <span id="status">Nighty Web</span>
+    <button class="window-button minimize" onclick="minimizeWindow()" title="Minimize">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+        <path d="M0 6h12v1H0z"/>
+      </svg>
+    </button>
+    <button class="window-button maximize" onclick="maximizeWindow()" title="Maximize">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+        <path d="M1 1v10h10V1H1zm1 1h8v8H2V2z"/>
+      </svg>
+    </button>
+    <button class="window-button close" onclick="exitApp()" title="Close">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+        <path d="M6.8 6l4.6-4.6c.2-.2.2-.5 0-.7-.2-.2-.5-.2-.7 0L6 5.2 1.4.7c-.2-.2-.5-.2-.7 0-.2.2-.2.5 0 .7L5.2 6 .7 10.6c-.2.2-.2.5 0 .7.1.1.2.1.4.1.1 0 .3 0 .4-.1L6 6.8l4.6 4.6c.1.1.2.1.4.1.1 0 .3 0 .4-.1.2-.2.2-.5 0-.7L6.8 6z"/>
+      </svg>
+    </button>
+  </div>
+
+  <webview id="site"></webview>
+
+  <script>
+    const fs = require('fs');
+    const path = require('path');
+    const { ipcRenderer } = require('electron');
+    const { app, getCurrentWindow } = require('@electron/remote');
+    const userData = app.getPath('userData');
+
+    const configPath = path.join(userData, 'config.json');
+    let config;
+    let hasAttemptedLogin = false;
+
+    function exitApp() {
+      console.log('Exit button clicked');
+      ipcRenderer.send('window-close');
+    }
+
+    function minimizeWindow() {
+      console.log('Minimize button clicked');
+      ipcRenderer.send('window-minimize');
+    }
+
+    function maximizeWindow() {
+      console.log('Maximize button clicked');
+      ipcRenderer.send('window-maximize');
+    }
+
+    function resetConfig() {
+      ipcRenderer.send('reset-config');
+    }
+
+    function reload() {
+      hasAttemptedLogin = false;
+      const webview = document.getElementById('site');
+      webview.reload();
+    }
+
+    function attemptLogin() {
+      if (hasAttemptedLogin) return;
+      hasAttemptedLogin = true;
+
+      const webview = document.getElementById('site');
+      setTimeout(() => {
+        const script = `
+          (function() {
+            const allInputs = Array.from(document.querySelectorAll('input'));
+            let usernameField = allInputs.find(input => 
+              input.type === 'text' || 
+              input.type === 'email' ||
+              (input.name && input.name.toLowerCase().includes('user')) ||
+              (input.name && input.name.toLowerCase().includes('email')) ||
+              (input.id && input.id.toLowerCase().includes('user')) ||
+              (input.id && input.id.toLowerCase().includes('email'))
+            );
+            let passwordField = allInputs.find(input => input.type === 'password');
+
+            if (usernameField && passwordField) {
+              usernameField.value = '${config.username.replace(/'/g, "\\'")}';
+              passwordField.value = '${config.password.replace(/'/g, "\\'")}';
+
+              usernameField.dispatchEvent(new Event('input', { bubbles: true }));
+              passwordField.dispatchEvent(new Event('input', { bubbles: true }));
+
+              const allButtons = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+              const submitButton = allButtons.find(btn => 
+                btn.type === 'submit' ||
+                (btn.textContent && btn.textContent.toLowerCase().includes('log')) ||
+                (btn.textContent && btn.textContent.toLowerCase().includes('sign'))
+              );
+
+              if (submitButton) {
+                setTimeout(() => submitButton.click(), 100);
+              }
+            }
+          })();
+        `;
+        webview.executeJavaScript(script).catch(() => {});
+      }, 1000);
+    }
+
+    try {
+      config = JSON.parse(fs.readFileSync(configPath));
+      const webview = document.getElementById('site');
+
+      webview.addEventListener('did-finish-load', () => {
+        if (!hasAttemptedLogin) setTimeout(() => attemptLogin(), 500);
+      });
+
+      webview.src = config.domain;
+    } catch (err) {
+      document.body.innerHTML = `<div style="color:white;text-align:center;margin-top:40%">
+        Error loading config.<br>${err}<br><br>
+        <button onclick="location.reload()">Retry</button>
+      </div>`;
+    }
+  </script>
+</body>
+</html>
